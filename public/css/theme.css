@@ -1,0 +1,74 @@
+
+.brand
+{
+	border-radius: 2em;
+	padding: 2em 0.5em;
+	margin: 2em auto;
+	border: 5px dotted #606c76;
+}
+
+.brand figcaption
+{
+	margin: auto;
+	text-align: center;
+	font-weight: 900;
+	font-size: 2em;
+	letter-spacing: 0.6em;
+}
+
+.navbar-dark
+{
+  background: #2B2D42;
+  max-height: 4em;
+}
+.navbar-brand
+{
+	font-size: 1em;
+  border: 1px solid #fff;
+  border-radius: 5px;
+  padding: 5px 5px 8px 3px;
+	-webkit-transform: rotate(-90deg);
+	-moz-transform: rotate(-90deg);
+	-ms-transform: rotate(-90deg);
+	-o-transform: rotate(-90deg);
+}
+
+
+
+/* Sticky footer styles
+-------------------------------------------------- */
+html {
+  position: relative;
+  min-height: 100%;
+}
+body {
+  /* Margin bottom by footer height */
+  margin-bottom: 60px;
+}
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  /* Set the fixed height of the footer here */
+  height: 60px;
+  line-height: 60px; /* Vertically center the text there */
+  background-color: #f5f5f5;
+}
+
+
+/* Custom page CSS
+-------------------------------------------------- */
+/* Not required for template or sticky footer method. */
+
+body > .container {
+  padding: 60px 15px 0;
+}
+
+.footer > .container {
+  padding-right: 15px;
+  padding-left: 15px;
+}
+
+code {
+  font-size: 80%;
+}

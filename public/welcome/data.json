@@ -1,0 +1,8 @@
+{
+	"meta": { "title": "Welcome", "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Deserunt, adipisci."},
+	"data": [
+		{ "title" : "Almost here", "abstract": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Cum, repellat?", "href":"#" },
+		{ "title" : "Lorem ipsum dolor.", "abstract": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ipsa incidunt minima rem?", "href":"#" },
+		{ "title" : "Lorem ipsum dolor sit amet, consectetur.", "abstract": "Lorem ipsum dolor sit amet.", "href":"#" }
+	]
+}

@@ -1,0 +1,19 @@
+{{> header }}
+<main  class="container" role="main">	
+	<h1 class="h2 text-center">Razur</h1>
+	<p class="text-center">A minimalistic JSON/Mustache centric content framework that focuses on open data style of archeticture.</p>
+	<h2>Anatomy</h2>
+	<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Repellat non optio dolorem quod natus assumenda aspernatur quasi, labore perspiciatis aliquam. Esse nemo quidem molestiae facilis perspiciatis, modi, ipsum facere aliquam?</p>
+	<h2>How it works</h2>
+	<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Magnam tempore, laboriosam voluptates, repudiandae sit veniam, deserunt similique rem quod, dignissimos esse. Laboriosam illo dolorem a modi recusandae quae accusantium commodi?</p>
+	<h2>Latest News</h2>
+	<ul>
+		{{# data}}
+		<li>
+			<a href="{{ href }}">{{ title }}</a>
+			<p>{{ abstract }}</p>
+		</li>
+		{{/data}}
+	</ul>
+</main>
+{{> footer }}
