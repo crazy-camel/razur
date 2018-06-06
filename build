@@ -1,0 +1,343 @@
+#!/usr/bin/env perl
+
+use utf8;
+use strict;
+use warnings;
+
+use feature ":5.16";
+
+
+use JSON;
+use Getopt::Long;
+
+use File::Spec;
+use File::Basename;
+use File::Path qw(make_path remove_tree);
+use File::Copy;
+use File::Find;
+
+use Digest::MD5 qw(md5_hex);
+
+use Data::Dump 'dump';
+
+# ######################################################################
+# # Initialization
+# ######################################################################
+
+my $dirname = "dist";
+my $type    = "cgi-bin";
+
+GetOptions(
+    "dist=s" => \$dirname,
+    "type=s" => \$type
+);    # flag
+
+my $config = config(
+    type => $type,
+    dist => $dirname
+);
+
+
+my ( $dist, $base ) = map { path( $_ ) } ( File::Spec->catdir( $config->{'meta'}->{'dist'}->{'folder'}  ), dirname( $0 ) );
+
+my @bdirs = File::Spec->splitdir( $base );
+
+
+
+
+print "\nDIGEST::".digest( File::Spec->catfile( ( @bdirs,'src' ) ,'jache.cgi' ) )."\n\n";
+
+
+exit();
+
+# ######################################################################
+# # Main
+# ######################################################################
+
+foreach my $action ( @{ $config->{ 'build' } } )
+{
+    given ( $action->{ 'action' } )
+    {
+        when ( 'clear' )  { clear( $action->{ 'path' } ) }
+        when ( 'make' )   { make( $action->{ 'path' } ) }
+        when ( 'clone' )  { clone( $action->{ 'src' }, $action->{ 'path' } ) }
+        when ( 'concat' ) { concat( $action->{ 'path' }, @{ $action->{ 'src' } } ) }
+    }
+
+}
+
+# ######################################################################
+# # Actions
+# ######################################################################
+
+# ======================================================================
+# (@function) clear -clears a directory
+# ----
+# (@p) <string> - directory required to clear
+# ----
+# (@r) void
+# ======================================================================
+sub clear
+{
+    print "\t[clear] clearning directory and children for $_[0]\n";
+    remove_tree( $_[ 0 ] ) if ( -d $_[ 0 ] );
+}
+
+# ======================================================================
+# (@function) make - creates a new directory (deep safe - "directory/subdirectory" will work)
+# ----
+# (@p) <string> - path to create
+# ----
+# (@r) void
+# ======================================================================
+sub make
+{
+    print "\t[make] making the new directory $_[0]\n";
+    make_path( $_[ 0 ] );
+}
+
+# ======================================================================
+# (@function) copy - copies file and/or directories to another location
+# ----
+# (@p) <string> - file or directory
+# ----
+# (@r) void
+# ======================================================================
+sub clone
+{
+    my ( $from, $to ) = map { File::Spec->rel2abs( $_, File::Spec->rel2abs( '.' ) ) } @_;
+
+    if ( -f $from )
+    {
+        return file_copy( $from, $to );
+    }
+
+    return directory_copy( $from, $to );
+}
+
+sub file_copy
+{
+    my ( $from, $to ) = @_;
+
+    return copy( $from, $to );
+}
+
+sub directory_copy
+{
+
+    my ( $from, $to ) = @_;
+
+    find sub
+    {
+        return if -d;
+
+        my ( $file, $copy ) = ( "$File::Find::name", "$File::Find::name" );
+
+        $copy =~ s/$from/$to/;
+
+        my ( $dir ) = dirname( $copy );
+
+        if ( !-d $dir )
+        {
+            make_path( $dir );
+        }
+
+        copy( $file, $copy );
+
+    }, $from;
+
+}
+# ======================================================================
+# (@function) concat - concate a series of files into one file
+# ----
+# (@p) <array> - array of source files
+# (@p) <string> - filename to write the concated files
+# ----
+# (@r) void
+# ======================================================================
+sub concat
+{
+	my ( $src, @files ) = map { File::Spec->rel2abs( $_, File::Spec->rel2abs( '.' ) ) } @_;
+
+	# step 1, lets make sure we can write to the path
+	 my ( $dir, @content ) = ( dirname( $src ), ());
+
+	 if ( !-d $dir )
+     {
+        make_path( $dir );
+     }
+
+    push @content, slurp($_) for ( @files );
+
+     # now write the file
+     spew( $src, join("\n\n", @content) );
+}
+
+# ######################################################################
+# # Helpers
+# ######################################################################
+
+# ======================================================================
+# (@function) path - normalizes paths in the script
+# ----
+# (@p) <string> - absolute path to the build
+# (@p) <boolean> - wantarray
+# ----
+# (@r) <string|array> - properties for the build
+# ======================================================================
+sub path
+{
+    my ( $path, $wantarray ) = @_ ;
+
+    if ( ! File::Spec->file_name_is_absolute( $path) )
+    {
+        $path = File::Spec->rel2abs( $path );
+    }
+
+    return ( $wantarray ) ? File::Spec->splitdir( $path ) : $path ;
+}
+
+# ======================================================================
+# (@function) config - loads the 'build.json' file
+# ----
+# (@p) <hash_key_value> - additional key => value parameters to overload
+# 						  the config file with
+# ----
+# (@r) <hash> - properties for the build
+# ======================================================================
+sub config
+{
+    my $content = slurp( 'build.json' );
+
+    # lets get the parameters to preparse the build info
+    my $params = JSON::decode_json( $content );
+
+    # see if we have runtime parameters
+    if ( @_ )
+    {
+        my $runtime = { runtime => { @_ } };
+        $params = { %$params, %$runtime };
+    }
+
+    while ( $content =~ /(\{\{\s*(.*?)\s*\}\})/g )
+    {
+        my $replacement = lookup( $params, $2 );
+        $content =~ s/$1/$replacement/g;
+    }
+
+    return JSON::decode_json( $content );
+}
+
+# ======================================================================
+# (@function) slurp - read the file contents and returns then as a scalar
+# ----
+# (@p) <string> - filename
+# ----
+# (@r) <string> - contents of file
+# ======================================================================
+sub slurp
+{
+    my ( $file ) = ( @_ );
+    if ( not -f $file )
+    {
+        return;
+    }
+    return do { local ( @ARGV, $/ ) = $file; <> };
+}
+
+# ======================================================================
+# (@function) spew - write contents to a file
+# ----
+# (@p) <string> - absolute file path
+# (@p) <array> - files to slurp
+# ----
+# (@r)
+# ======================================================================
+sub spew
+{
+	my ( $src, $content ) = @_;
+
+	open(my $fh, '>:encoding(UTF-8)', $src)
+			or die "Could not open file '$src' $!";
+
+	print $fh $content;
+	undef $fh;
+
+}
+# ======================================================================
+# (@function) lookup - looks up values in a hash using dot-notation
+# ----
+# (@p) <hash> - the hash to lookup against
+# (@p) <string> - the key to inspect against
+# ----
+# (@r) <string> - value of dot-notation lookup
+# ======================================================================
+sub lookup
+{
+    my ( $dataset, $index ) = @_;
+
+    unless ( $index )
+    {
+        # this is a file path
+        my @segments  = split /\./, $dataset;
+
+        my $filename  = pop @segments;
+
+        return File::Spec->catfile(  ( @bdirs, @segments ) , $filename.'.perl' );
+    }
+
+    my $response = $dataset;
+
+    foreach my $key ( split /\./, $index )
+    {
+        $response = $response->{ $key } if ( $response->{ $key } );
+    }
+
+    return $response;
+}
+
+# ======================================================================
+# (@function) digest - looks up values in a hash using dot-notation
+# ----
+# (@p) <hash> - the hash to lookup against
+# (@p) <string> - the key to inspect against
+# ----
+# (@r) <string> - value of dot-notation lookup
+# ======================================================================
+sub digest
+{
+    my ( $file, $digest, $orig ) = ( @_ ) ;
+
+    my $is_notation =  ( index( $file, '/' )  == -1 ) ? 1 : 0;
+
+    if ( $is_notation )
+    {
+        # this is dot-notation lookup
+        $file = lookup( $file );
+    }
+
+    $digest .= ( stat( $file ) )[9];
+
+    my $content = slurp( $file );
+
+    while ( $content =~ m/\{\{\>\s*([a-z0-9\.]+)\s*\}\}/gi )
+    {
+        $digest .= digest( $1, $digest );
+    }
+
+    return ( $is_notation ) ? $digest : md5_hex( $digest );
+}
+
+# ======================================================================
+# (@function) weave - generates the complete template
+# ----
+# (@p) <hash> - the hash to lookup against
+# (@p) <string> - the key to inspect against
+# ----
+# (@r) <string> - value of dot-notation lookup
+# ======================================================================
+sub weave
+{
+
+
+}

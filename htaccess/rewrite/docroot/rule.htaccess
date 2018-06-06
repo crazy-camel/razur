@@ -1,0 +1,22 @@
+# ----------------------------------------------------------------------
+# | Rewrite engine                                                     |
+# ----------------------------------------------------------------------
+
+<IfModule mod_rewrite.c>
+
+    RewriteEngine On
+
+    Options +FollowSymlinks
+
+    RewriteBase /
+
+    RewriteCond %{HTTPS} =on
+    RewriteRule ^ - [env=proto:https]
+    RewriteCond %{HTTPS} !=on
+    RewriteRule ^ - [env=proto:http]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{PATH_INFO} ^(.[^\.]*)$
+    RewriteRule . /jache.cgi [L]
+
+</IfModule>
