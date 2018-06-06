@@ -238,10 +238,12 @@ sub config
 sub slurp
 {
     my ( $file ) = ( @_ );
+
     if ( not -f $file )
     {
         return;
     }
+    
     return do { local ( @ARGV, $/ ) = $file; <> };
 }
 
