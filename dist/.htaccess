@@ -24,6 +24,7 @@ Options -MultiViews
 SetEnv TEMPLATE_PARTIALS "inc"
 
 
+
 DirectoryIndex /cgi-bin/razur.cgi
 
 # ----------------------------------------------------------------------
@@ -31,6 +32,8 @@ DirectoryIndex /cgi-bin/razur.cgi
 # ----------------------------------------------------------------------
 
 <IfModule mod_rewrite.c>
+    
+    RedirectMatch 404 ^(.*).pm$
 
     RewriteEngine On
 
