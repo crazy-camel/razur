@@ -9,11 +9,10 @@
 # ======================================================================
 sub parse
 {
-    require JSON;
 
     my ( $filename, $overrides ) = ( @_ );
 
-    my $json = decode_json slurp( $filename );
+    my $json = decode_json path( $filename )->slurp_utf8;
 
     return { %$json, %$overrides };
 }

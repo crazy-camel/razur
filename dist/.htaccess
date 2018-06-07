@@ -22,7 +22,7 @@ ErrorDocument 500 /500.html
 Options -MultiViews
 
 
-DirectoryIndex /cgi-bin/jache.cgi
+DirectoryIndex /cgi-bin/razur.cgi
 
 # ----------------------------------------------------------------------
 # | Rewrite engine                                                     |
@@ -43,6 +43,7 @@ DirectoryIndex /cgi-bin/jache.cgi
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{PATH_INFO} ^(.[^\.]*)$
-    RewriteRule . /cgi-bin/jache.cgi [L]
+    RewriteRule . /cgi-bin/razur.cgi [L]
 
 </IfModule>
+

@@ -5,27 +5,33 @@ use strict;
 use warnings;
 
 use feature ":5.16";
+use Time::Piece;
 
+no warnings 'experimental::smartmatch';
 
-use JSON;
+use lib 'lib';
+
 use Getopt::Long;
+use JSON::MaybeXS;
+use Path::Tiny 'path';
+use Mustache::Simple;
 
-use File::Spec;
-use File::Basename;
-use File::Path qw(make_path remove_tree);
-use File::Copy;
-use File::Find;
-
-use Digest::MD5 qw(md5_hex);
 
 use Data::Dump 'dump';
 
 # ######################################################################
-# # Initialization
+# # Defaults
 # ######################################################################
 
 my $dirname = "dist";
 my $type    = "cgi-bin";
+
+my $base = path( $0 )->parent();
+
+
+# ######################################################################
+# # Initialization
+# ######################################################################
 
 GetOptions(
     "dist=s" => \$dirname,
@@ -38,17 +44,8 @@ my $config = config(
 );
 
 
-my ( $dist, $base ) = map { path( $_ ) } ( File::Spec->catdir( $config->{'meta'}->{'dist'}->{'folder'}  ), dirname( $0 ) );
+my $dist = $base->child( $dirname );
 
-my @bdirs = File::Spec->splitdir( $base );
-
-
-
-
-print "\nDIGEST::".digest( File::Spec->catfile( ( @bdirs,'src' ) ,'jache.cgi' ) )."\n\n";
-
-
-exit();
 
 # ######################################################################
 # # Main
@@ -61,6 +58,7 @@ foreach my $action ( @{ $config->{ 'build' } } )
         when ( 'clear' )  { clear( $action->{ 'path' } ) }
         when ( 'make' )   { make( $action->{ 'path' } ) }
         when ( 'clone' )  { clone( $action->{ 'src' }, $action->{ 'path' } ) }
+        when ( 'weave' )  { weave( $action->{ 'src' }, $action->{ 'path' } ) }
         when ( 'concat' ) { concat( $action->{ 'path' }, @{ $action->{ 'src' } } ) }
     }
 
@@ -79,8 +77,8 @@ foreach my $action ( @{ $config->{ 'build' } } )
 # ======================================================================
 sub clear
 {
-    print "\t[clear] clearning directory and children for $_[0]\n";
-    remove_tree( $_[ 0 ] ) if ( -d $_[ 0 ] );
+    print console( '[clear]','clearning directory and children for', $_[0] );
+    $base->child( $_[ 0 ] )->remove_tree( { safe => 0 } );
 }
 
 # ======================================================================
@@ -92,8 +90,8 @@ sub clear
 # ======================================================================
 sub make
 {
-    print "\t[make] making the new directory $_[0]\n";
-    make_path( $_[ 0 ] );
+    print console( '[make]','making the new directory', $_[0]);
+    $base->child( $_[ 0 ] )->mkpath;
 }
 
 # ======================================================================
@@ -105,48 +103,40 @@ sub make
 # ======================================================================
 sub clone
 {
-    my ( $from, $to ) = map { File::Spec->rel2abs( $_, File::Spec->rel2abs( '.' ) ) } @_;
+    my ( $from, $to ) = map { $base->child( $_ ) } @_;
 
-    if ( -f $from )
+    if ( $from->is_file() )
     {
-        return file_copy( $from, $to );
+        print console('[clone]','copied',$from->stringify,'to',$to->stringify);
+
+        return $from->copy( $to->stringify );
     }
 
-    return directory_copy( $from, $to );
+    my $iter = $from->iterator({
+        recurse         => 1,
+        follow_symlinks => 1,
+    });
+
+    my $count = 0;
+
+    while ( my $path = $iter->() ) {
+
+        next if ( $path->is_dir );
+
+        my $npath = $path;
+
+        $npath =~ s/^$from\//$to\//;
+
+        $path->copy( path( $npath )->touchpath );
+
+        $count++;
+    }
+
+    print console('[clone]','copied',$from->stringify,'to',$to->stringify, "($count files)");
+
+    return 1;
 }
 
-sub file_copy
-{
-    my ( $from, $to ) = @_;
-
-    return copy( $from, $to );
-}
-
-sub directory_copy
-{
-
-    my ( $from, $to ) = @_;
-
-    find sub
-    {
-        return if -d;
-
-        my ( $file, $copy ) = ( "$File::Find::name", "$File::Find::name" );
-
-        $copy =~ s/$from/$to/;
-
-        my ( $dir ) = dirname( $copy );
-
-        if ( !-d $dir )
-        {
-            make_path( $dir );
-        }
-
-        copy( $file, $copy );
-
-    }, $from;
-
-}
 # ======================================================================
 # (@function) concat - concate a series of files into one file
 # ----
@@ -157,45 +147,44 @@ sub directory_copy
 # ======================================================================
 sub concat
 {
-	my ( $src, @files ) = map { File::Spec->rel2abs( $_, File::Spec->rel2abs( '.' ) ) } @_;
+	my ( $src, @files ) = map { $base->child( $_ ) } @_;
 
 	# step 1, lets make sure we can write to the path
-	 my ( $dir, @content ) = ( dirname( $src ), ());
+	 my @content = ();
 
-	 if ( !-d $dir )
+	 if ( ! $src->parent->is_dir() )
      {
-        make_path( $dir );
+        $src->parent()->mkdir();
      }
 
-    push @content, slurp($_) for ( @files );
+    push @content, $_->lines_utf8() for ( @files );
 
      # now write the file
-     spew( $src, join("\n\n", @content) );
+     $src->spew_utf8( @content );
+}
+
+
+# ======================================================================
+# (@function) weave - build a src file with all it's parts
+# ----
+# (@p) <string> - template file
+# (@p) <string> - path to write complete
+# ----
+# (@r) <string> - complete file
+# ======================================================================
+sub weave
+{
+    my ( $src, $dest ) = map { $base->child( $_ ) } @_;
+
+    my $tache = Mustache::Simple->new( extension => 'perl', delimiters => [ '#{{', '}}' ] );
+
+    # now write the file
+    return $dest->touchpath->spew_utf8( $tache->render( $src->parent->stringify.'/'.$src->basename(qr/.perl/) , {} ) );
 }
 
 # ######################################################################
 # # Helpers
 # ######################################################################
-
-# ======================================================================
-# (@function) path - normalizes paths in the script
-# ----
-# (@p) <string> - absolute path to the build
-# (@p) <boolean> - wantarray
-# ----
-# (@r) <string|array> - properties for the build
-# ======================================================================
-sub path
-{
-    my ( $path, $wantarray ) = @_ ;
-
-    if ( ! File::Spec->file_name_is_absolute( $path) )
-    {
-        $path = File::Spec->rel2abs( $path );
-    }
-
-    return ( $wantarray ) ? File::Spec->splitdir( $path ) : $path ;
-}
 
 # ======================================================================
 # (@function) config - loads the 'build.json' file
@@ -207,65 +196,15 @@ sub path
 # ======================================================================
 sub config
 {
-    my $content = slurp( 'build.json' );
+    my $tache = Mustache::Simple->new( extension => 'json' );
+
+    my $json = $tache->render('build', { runtime => { @_ } } );
 
     # lets get the parameters to preparse the build info
-    my $params = JSON::decode_json( $content );
-
-    # see if we have runtime parameters
-    if ( @_ )
-    {
-        my $runtime = { runtime => { @_ } };
-        $params = { %$params, %$runtime };
-    }
-
-    while ( $content =~ /(\{\{\s*(.*?)\s*\}\})/g )
-    {
-        my $replacement = lookup( $params, $2 );
-        $content =~ s/$1/$replacement/g;
-    }
-
-    return JSON::decode_json( $content );
-}
-
-# ======================================================================
-# (@function) slurp - read the file contents and returns then as a scalar
-# ----
-# (@p) <string> - filename
-# ----
-# (@r) <string> - contents of file
-# ======================================================================
-sub slurp
-{
-    my ( $file ) = ( @_ );
-
-    if ( not -f $file )
-    {
-        return;
-    }
     
-    return do { local ( @ARGV, $/ ) = $file; <> };
+    return decode_json $json;
 }
 
-# ======================================================================
-# (@function) spew - write contents to a file
-# ----
-# (@p) <string> - absolute file path
-# (@p) <array> - files to slurp
-# ----
-# (@r)
-# ======================================================================
-sub spew
-{
-	my ( $src, $content ) = @_;
-
-	open(my $fh, '>:encoding(UTF-8)', $src)
-			or die "Could not open file '$src' $!";
-
-	print $fh $content;
-	undef $fh;
-
-}
 # ======================================================================
 # (@function) lookup - looks up values in a hash using dot-notation
 # ----
@@ -278,16 +217,6 @@ sub lookup
 {
     my ( $dataset, $index ) = @_;
 
-    unless ( $index )
-    {
-        # this is a file path
-        my @segments  = split /\./, $dataset;
-
-        my $filename  = pop @segments;
-
-        return File::Spec->catfile(  ( @bdirs, @segments ) , $filename.'.perl' );
-    }
-
     my $response = $dataset;
 
     foreach my $key ( split /\./, $index )
@@ -298,37 +227,6 @@ sub lookup
     return $response;
 }
 
-# ======================================================================
-# (@function) digest - looks up values in a hash using dot-notation
-# ----
-# (@p) <hash> - the hash to lookup against
-# (@p) <string> - the key to inspect against
-# ----
-# (@r) <string> - value of dot-notation lookup
-# ======================================================================
-sub digest
-{
-    my ( $file, $digest, $orig ) = ( @_ ) ;
-
-    my $is_notation =  ( index( $file, '/' )  == -1 ) ? 1 : 0;
-
-    if ( $is_notation )
-    {
-        # this is dot-notation lookup
-        $file = lookup( $file );
-    }
-
-    $digest .= ( stat( $file ) )[9];
-
-    my $content = slurp( $file );
-
-    while ( $content =~ m/\{\{\>\s*([a-z0-9\.]+)\s*\}\}/gi )
-    {
-        $digest .= digest( $1, $digest );
-    }
-
-    return ( $is_notation ) ? $digest : md5_hex( $digest );
-}
 
 # ======================================================================
 # (@function) weave - generates the complete template
@@ -338,8 +236,7 @@ sub digest
 # ----
 # (@r) <string> - value of dot-notation lookup
 # ======================================================================
-sub weave
+sub console
 {
-
-
+    return '[',localtime()->strftime(),'] ',join( ' ', @_ ), "\n";
 }

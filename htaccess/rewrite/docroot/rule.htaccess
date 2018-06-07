@@ -17,6 +17,7 @@
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{PATH_INFO} ^(.[^\.]*)$
-    RewriteRule . /jache.cgi [L]
+    RewriteRule . /razur.cgi [L]
 
 </IfModule>
+

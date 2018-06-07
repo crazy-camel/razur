@@ -2,21 +2,20 @@
 	"meta" : { 
 		"name" : "razur",
 		"version" : "1.0",
-		"dist": { "folder" : "{{ runtime.dist }}" },
-		"src" : { "folder" : "src" }
+		"dist": { "folder" : "{{ runtime.dist }}" }
 	},
 	"build": [
-		{ "action": "clear", "path" : "{{ meta.dist.folder }}"},
-		{ "action": "make", "path" : "{{ meta.dist.folder }}"},
+		{ "action": "clear", "path" : "{{ runtime.dist }}"},
+		{ "action": "make", "path" : "{{ runtime.dist }}"},
 		
-		{ "action": "clone", "src": "lib/JSON-MaybeXS/lib", "path" : "{{ meta.dist.folder }}"},
-		{ "action": "clone", "src": "lib/Path-Tiny/lib", "path" : "{{ meta.dist.folder }}"},
+		{ "action": "clone", "src": "lib", "path" : "{{ runtime.dist }}/cgi-bin/"},
 
-		{ "action": "concat","path": "{{ meta.dist.folder }}/.htaccess", "src": [
+		{ "action": "concat", "path": "{{ runtime.dist }}/.htaccess", "src": [
 			"htaccess/errors/{{ runtime.type }}/rule.htaccess",
 			"htaccess/options/{{ runtime.type }}/rule.htaccess",
 			"htaccess/directoryindex/{{ runtime.type }}/rule.htaccess",
 			"htaccess/rewrite/{{ runtime.type }}/rule.htaccess"
-		]}
+		]},
+		{ "action": "weave", "src": "src/razur.cgi", "path": "{{ runtime.dist }}/cgi-bin/razur.cgi" }
 	]
 }
