@@ -21,6 +21,8 @@ ErrorDocument 500 /500.html
 
 Options -MultiViews
 
+SetEnv TEMPLATE_PARTIALS "inc"
+
 
 DirectoryIndex /cgi-bin/razur.cgi
 

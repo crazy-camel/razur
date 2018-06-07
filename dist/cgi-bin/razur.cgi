@@ -16,11 +16,13 @@ use Mustache::Simple;
 use Data::Dump 'dump';
 
 
+
 # ######################################################################
 # # Defaults
 # ######################################################################
 
-my $stache = Mustache::Simple->new( extension => 'html' );
+
+my $stache = Mustache::Simple->new( extension => 'html', partials => path( $ENV{'TEMPLATE_PARTIALS'} )->stringify );
 
 my $docroot = path( $ENV{'DOCUMENT_ROOT'} );
 
@@ -31,7 +33,29 @@ my $docroot = path( $ENV{'DOCUMENT_ROOT'} );
 
 print "Content-Type: text/html\n\n";
 
-print dump resolve();
+my $request = resolve();
+
+
+print dump $request;
+
+
+my $context = { query => $request->{'query'} };
+
+if ( $request->{'path'}->{'model'} )
+{
+    my $json = decode_json $request->{'path'}->{'model'}->slurp_utf8;
+    $context = {
+        %$json,
+        %$context
+    };
+}
+
+print dump $context;
+
+print $stache->render(
+        $request->{'path'}->{'view'}->slurp_utf8,
+        $context
+    );
 # ======================================================================
 # (@function) resolve - resolves the path
 # ----
@@ -43,7 +67,7 @@ print dump resolve();
 sub resolve
 {
 
-   my ( $path, @parameters ) = ( '', () );
+   my ( $path, @parameters ) = ( {}, () );
 
     my @fragments = grep { $_ ne '' } split /\//, $ENV{'PATH_INFO'};
 
@@ -53,7 +77,26 @@ sub resolve
 
         if ( $docroot->child( @dir )->is_dir() )
         {
-            $path = $docroot->child( @dir );
+            my $base = $docroot->child( @dir );
+
+            $path = { 'view' => $path->child( 'index.html' ) };
+
+            if ( $path->child('index.json')->is_file() )
+            {
+                $path->{'model'} = $path->child('index.json');
+            }
+
+            # lets establish views and models with a lookahead
+
+            if ( $fragments[$i-1] && $base->child( $fragments[$i-1].".html" )->is_file() )
+            {
+                $path->{'view'} = $path->child(  $fragments[$i-1].".html"  );
+
+                if ( $path->child(  $fragments[$i-1].".html"  )->is_file() )
+                {
+                    $path->{'model'} = $path->child(  $fragments[$i-1].".json"  );
+                }
+            }
 
             last;
         }
@@ -69,12 +112,19 @@ sub resolve
         @parameters = ( @parameters, parameters( $ENV{'QUERY_STRING'} ) );
     }
 
-    if ( $path eq '' )
+    push @parameters, '*' if ( @parameters % 2 != 0 );
+
+    if ( !$path->{'view'} )
     {
-        $path = 'index.html';
+        $path = { 'view' => $docroot->child( 'index.html' ) };
+
+        if ( $docroot->child('index.json')->is_file() )
+        {
+            $path->{'model'} = $docroot->child('index.json');
+        }
     }
 
-    return { path => $path, parameters => [ @parameters ] }
+    return { path => $path, query => { @parameters } }
 }
 
 

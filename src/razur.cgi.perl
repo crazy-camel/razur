@@ -6,7 +6,7 @@
 # # Defaults
 # ######################################################################
 
-my $stache = Mustache::Simple->new( extension => 'html' );
+my $stache = Mustache::Simple->new( extension => 'html', partials => path( $ENV{'TEMPLATE_PARTIALS'} )->stringify );
 
 my $docroot = path( $ENV{'DOCUMENT_ROOT'} );
 
@@ -17,7 +17,9 @@ my $docroot = path( $ENV{'DOCUMENT_ROOT'} );
 
 print "Content-Type: text/html\n\n";
 
-print dump resolve();
+my $request = resolve();
+
+print $stache->render( $request->{'path'}->slurp_utf8, { parameters => $request->{'parameters'} } )
 
 #{{> src/path/resolve }}
 

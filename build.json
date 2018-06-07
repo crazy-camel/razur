@@ -13,6 +13,7 @@
 		{ "action": "concat", "path": "{{ runtime.dist }}/.htaccess", "src": [
 			"htaccess/errors/{{ runtime.type }}/rule.htaccess",
 			"htaccess/options/{{ runtime.type }}/rule.htaccess",
+			"htaccess/vars/{{ runtime.type }}/rule.htaccess",
 			"htaccess/directoryindex/{{ runtime.type }}/rule.htaccess",
 			"htaccess/rewrite/{{ runtime.type }}/rule.htaccess"
 		]},

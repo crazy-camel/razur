@@ -1,0 +1,9 @@
+# ----------------------------------------------------------------------
+# | Enviroment Variables                                               |
+# ----------------------------------------------------------------------
+
+# add some customizations for script
+#
+
+SetEnv TEMPLATE_PARTIALS "inc"
+

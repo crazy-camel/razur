@@ -9,7 +9,7 @@
 sub resolve
 {
 
-   my ( $path, @parameters ) = ( '', () );
+   my ( $path, @parameters ) = ( {}, () );
 
     my @fragments = grep { $_ ne '' } split /\//, $ENV{'PATH_INFO'};
 
@@ -19,7 +19,26 @@ sub resolve
 
         if ( $docroot->child( @dir )->is_dir() )
         {
-            $path = $docroot->child( @dir );
+            my $base = $docroot->child( @dir );
+
+            $path = { 'view' => $path->child( 'index.html' ) };
+
+            if ( $path->child('index.json')->is_file() )
+            {
+                $path->{'model'} = $path->child('index.json');
+            }
+
+            # lets establish views and models with a lookahead
+
+            if ( $fragments[$i-1] && $base->child( $fragments[$i-1].".html" )->is_file() )
+            {
+                $path->{'view'} = $path->child(  $fragments[$i-1].".html"  );
+
+                if ( $path->child(  $fragments[$i-1].".html"  )->is_file() )
+                {
+                    $path->{'model'} = $path->child(  $fragments[$i-1].".json"  );
+                }
+            }
 
             last;
         }
@@ -35,9 +54,14 @@ sub resolve
         @parameters = ( @parameters, parameters( $ENV{'QUERY_STRING'} ) );
     }
 
-    if ( $path eq '' )
+    if ( !$path->{'view'} )
     {
-        $path = 'index.html';
+        $path = { 'view' => $docroot->child( 'index.html' ) };
+
+        if ( $docroot->child('index.json')->is_file() )
+        {
+            $docroot->{'model'} = $docroot->child('index.json');
+        }
     }
 
     return { path => $path, parameters => [ @parameters ] }
