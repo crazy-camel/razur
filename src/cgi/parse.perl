@@ -9,21 +9,25 @@ sub parameters
 {
     require HTML::Entities;
 
-    my ( $parameters, $query ) = ( {}, @_ );
+    my ( $query, @parameters ) = ( shift );
 
-    if ( $query ){
+    if ( $query )
+    {
 
         my @pairs = split( /&/, $query);
 
-        foreach $pair (@pairs){
+        foreach my $pair (@pairs)
+        {
 
             my ($name, $value) = split( /=/, $pair);
 
             $value =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
 
-            $parameters->{ $name } = HTML::Entities::encode_entities( $value , join( "", ('&','<','>','"',"'", "\012\015" ) ) )  ;
+            push @parameters, $name;
+
+            push @parameters, HTML::Entities::encode_entities( $value , join( "", ('&','<','>','"',"'", "\012\015" ) ) ) ;
         }
     }
 
-    return $parameters;
+    return @parameters;
 }

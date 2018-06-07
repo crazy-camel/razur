@@ -17,7 +17,7 @@
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{PATH_INFO} ^(.[^\.]*)$
-    RewriteRule . /cgi-bin/razur.cgi [L]
+    RewriteRule ^(.*)$ /cgi-bin/razur.cgi/$1 [L]
 
 </IfModule>
 

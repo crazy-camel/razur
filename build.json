@@ -16,6 +16,7 @@
 			"htaccess/directoryindex/{{ runtime.type }}/rule.htaccess",
 			"htaccess/rewrite/{{ runtime.type }}/rule.htaccess"
 		]},
-		{ "action": "weave", "src": "src/razur.cgi", "path": "{{ runtime.dist }}/cgi-bin/razur.cgi" }
+		{ "action": "weave", "src": "src/razur.cgi", "path": "{{ runtime.dist }}/cgi-bin/razur.cgi" },
+		{ "action": "permission", "path": "{{ runtime.dist }}/cgi-bin/razur.cgi", "permission" : "a+x" }
 	]
 }

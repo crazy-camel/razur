@@ -60,6 +60,7 @@ foreach my $action ( @{ $config->{ 'build' } } )
         when ( 'clone' )  { clone( $action->{ 'src' }, $action->{ 'path' } ) }
         when ( 'weave' )  { weave( $action->{ 'src' }, $action->{ 'path' } ) }
         when ( 'concat' ) { concat( $action->{ 'path' }, @{ $action->{ 'src' } } ) }
+        when ( 'permission' )  { permission( $action->{ 'path' }, $action->{ 'permission' } ) }
     }
 
 }
@@ -180,6 +181,19 @@ sub weave
 
     # now write the file
     return $dest->touchpath->spew_utf8( $tache->render( $src->parent->stringify.'/'.$src->basename(qr/.perl/) , {} ) );
+}
+
+# ======================================================================
+# (@function) permission - change permissions to a file
+# ----
+# (@p) <string> - file
+# (@p) <string> - permissions
+# ----
+# (@r) void
+# ======================================================================
+sub permission
+{
+    return $base->child( $_[0] )->chmod( $_[1] );
 }
 
 # ######################################################################
