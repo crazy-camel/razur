@@ -16,8 +16,8 @@
     RewriteRule ^ - [env=proto:http]
 
     RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{PATH_INFO} ^(.[^\.]*)$
-    RewriteRule ^(.*)$ /cgi-bin/razur.cgi/$1 [L]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^(.*)$ /razur.cgi/$1 [L]
 
 </IfModule>
 

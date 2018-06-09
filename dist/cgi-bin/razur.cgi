@@ -33,6 +33,11 @@ my $docroot = path( $ENV{'DOCUMENT_ROOT'} );
 
 print "Content-Type: text/html\n\n";
 
+print "ok --> ";
+
+print unpack('a', $ENV{'PATH_INFO'} );
+exit;
+
 my $request = resolve();
 
 
@@ -79,23 +84,26 @@ sub resolve
         {
             my $base = $docroot->child( @dir );
 
-            $path = { 'view' => $path->child( 'index.html' ) };
 
-            if ( $path->child('index.json')->is_file() )
+            $path = { 'view' => $base->child( 'index.html' ) };
+
+            if ( $base->child('index.json')->is_file() )
             {
-                $path->{'model'} = $path->child('index.json');
+                $path->{'model'} = $base->child('index.json');
             }
 
             # lets establish views and models with a lookahead
 
-            if ( $fragments[$i-1] && $base->child( $fragments[$i-1].".html" )->is_file() )
+            if ( $fragments[$i+1] && $base->child( $fragments[$i+1].".html" )->is_file() )
             {
-                $path->{'view'} = $path->child(  $fragments[$i-1].".html"  );
+                $path->{'view'} = $base->child(  $fragments[$i+1].".html"  );
 
-                if ( $path->child(  $fragments[$i-1].".html"  )->is_file() )
+                if ( $base->child(  $fragments[$i+1].".json"  )->is_file() )
                 {
-                    $path->{'model'} = $path->child(  $fragments[$i-1].".json"  );
+                    $path->{'model'} = $base->child(  $fragments[$i+1].".json"  );
                 }
+
+                pop @parameters;
             }
 
             last;

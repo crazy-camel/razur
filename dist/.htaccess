@@ -19,13 +19,13 @@ ErrorDocument 500 /500.html
 #
 # https://httpd.apache.org/docs/current/content-negotiation.html#multiviews
 
+
 Options -MultiViews
+
 
 SetEnv TEMPLATE_PARTIALS "inc"
 
 
-
-DirectoryIndex /cgi-bin/razur.cgi
 
 # ----------------------------------------------------------------------
 # | Rewrite engine                                                     |
@@ -39,6 +39,8 @@ DirectoryIndex /cgi-bin/razur.cgi
 
     Options +FollowSymlinks
 
+    DirectorySlash Off
+
     RewriteBase /
 
     RewriteCond %{HTTPS} =on
@@ -46,8 +48,9 @@ DirectoryIndex /cgi-bin/razur.cgi
     RewriteCond %{HTTPS} !=on
     RewriteRule ^ - [env=proto:http]
 
+
     RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{PATH_INFO} ^(.[^\.]*)$
+    RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^(.*)$ /cgi-bin/razur.cgi/$1 [L]
 
 </IfModule>

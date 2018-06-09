@@ -1,15 +1,16 @@
 # ======================================================================
-# (@function) resolve - resolves the path
+# (@function) route - extracts the route information
 # ----
-# (@p) <string> - path_info';
+# (@p) <string> - path_info;
 # ----
-# (@r) <hashref>
+# (@r) <array> - [ path, \@parameters ]
 # ======================================================================
 
-sub resolve
+sub route
 {
 
    my ( $path, @parameters ) = ( {}, () );
+
 
     my @fragments = grep { $_ ne '' } split /\//, $ENV{'PATH_INFO'};
 
@@ -65,5 +66,32 @@ sub resolve
     }
 
     return { path => $path, parameters => [ @parameters ] }
+}
+
+
+# ======================================================================
+# (@function) _crawl - inspect the path backwards till we find a match (if possible)
+# ----
+# (@p) <string|array|hash|object>
+# ----
+# (@r) <string|array|hash|object>
+# ======================================================================
+sub _crawl
+{
+
+}
+
+
+# ======================================================================
+# (@function) _should - check to see if the path_info under the docroot
+# ----
+# (@p) <string> - path_info
+# ----
+# (@r) <boolean>
+# ======================================================================
+sub _should
+{
+    my $pinfo = ( index( $ENV{ 'PATH_INFO' }, '/') == 0 )
+    my $path = path( $ENV{ 'PATH_INFO' } )->realpath();
 }
 
